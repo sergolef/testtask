@@ -1,0 +1,6 @@
+name = Car entity 
+description = Custom entity - car.
+package = Test Tasks Group
+core = 7.x
+files[] = car.install
+files[] = car.module

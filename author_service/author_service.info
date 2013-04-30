@@ -1,0 +1,5 @@
+name = Author Service 
+description = Custom service for CRUD author entity.
+package = Service
+core = 7.x
+files[] = author_service.module

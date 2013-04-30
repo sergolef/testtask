@@ -1,0 +1,5 @@
+name = Car Service 
+description = Custom service for CRUD car entity.
+package = Service
+core = 7.x
+files[] = car_service.module

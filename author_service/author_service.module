@@ -1,0 +1,278 @@
+<?php
+
+/**
+ * Implementation of hook_services_services().
+ */
+function author_services_resources() {
+    return array(
+      'author' => array(
+        'retrieve' => array(
+          'help' => 'Retrieves a author',
+          'callback' => '_author_service_retrieve',
+          'access callback' => '_author_service_access',
+          'access arguments' => array('view'),
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'author_id',
+              'type' => 'int',
+              'description' => 'The id of the note to get',
+              'source' => array('path' => '0'),
+              'optional' => FALSE,
+            ),
+          ),
+        ),
+        'create' => array(
+          'help' => 'Creates the author entity',
+          'callback' => '_author_service_create',
+          'access arguments' => array('author service create'),
+          'access arguments append' => FALSE,
+          'args' => array(
+            array(
+              'name' => 'data',
+              'type' => 'struct',
+              'description' => 'The author object',
+              'source' => 'data',
+              'optional' => FALSE,
+            ),
+          ),
+        ),
+        'update' => array(
+          'help' => 'Updates an author entity',
+          'callback' => '_author_service_update',
+          'access callback' => '_author_service_access',
+          'access arguments' => array('update'),
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'author_id',
+              'type' => 'int',
+              'description' => 'The id of the node to update',
+              'source' => array('path' => '0'),
+              'optional' => FALSE,
+            ),
+            array(
+              'name' => 'data',
+              'type' => 'struct',
+              'description' => 'The note data object',
+              'source' => 'data',
+              'optional' => FALSE,
+            ),
+          ),
+        ),
+        'delete' => array(
+          'help' => 'Deletes an author',
+          'callback' => '_author_service_delete',
+          'access callback' => '_author_service_access',
+          'access arguments' => array('delete'),
+          'access arguments append' => TRUE,
+          'args' => array(
+            array(
+              'name' => 'author_id',
+              'type' => 'int',
+              'description' => 'The id of the note to delete',
+              'source' => array('path' => '0'),
+              'optional' => FALSE,
+            ),
+          ),
+        ),
+        'index' => array(
+          'help' => 'Retrieves a listing of author',
+          'callback' => '_author_service_index',
+          'access callback' => 'user_access',
+          'access arguments' => array('access content'),
+          'access arguments append' => FALSE,
+          'args' => array(
+            array(
+              'name' => 'page',
+              'optional' => TRUE,
+              'type' => 'int',
+              'description' => 'The zero-based index of the page to get, defaults to 0.',
+              'default value' => 0,
+              'source' => array('param' => 'page'),
+            ),
+            array(
+              'name' => 'fields',
+              'optional' => TRUE,
+              'type' => 'string',
+              'description' => 'The fields to get.',
+              'default value' => '*',
+              'source' => array('param' => 'fields'),
+            ),
+            array(
+              'name' => 'parameters',
+              'optional' => TRUE,
+              'type' => 'array',
+              'description' => 'Parameters array',
+              'default value' => array(),
+              'source' => array('param' => 'parameters'),
+            ),
+            array(
+              'name' => 'pagesize',
+              'optional' => TRUE,
+              'type' => 'init',
+              'description' => 'Number of records to get per page.',
+              'default value' => variable_get('services_node_index_page_size', 20),
+              'source' => array('param' => 'pagesize'),
+            ),
+          ),
+        ),
+      ),
+    );
+}
+
+/**
+ * Return the results of entity_load('author', $id) by id
+ * @param $id authir_id of the author we want to return.
+ * @return return author object or false if not found
+ */
+function _author_service_retrieve($id) {
+    $author = entity_load('author', array('author_id' => $id));
+    return (object) array(
+          'id' => $id,
+          'object' => (object) $author,
+    );
+}
+
+/**
+ * implement data validator for create and update car entity
+ */
+function _author_data_validate($data) {
+
+    if (!isset($data['first_name'])) {
+        return array('description' => 'Missing author attribute first_name', 'code' => 406);
+    }
+    if (!isset($data['last_name'])) {
+        return array('description' => 'Missing author attribute last_name', 'code' => 406);
+    }
+    if (!isset($data['birthdate'])) {
+        return array('description' => 'Missing author attribute birthdate', 'code' => 406);
+    }
+    if (!isset($data['main_genre'])) {
+        return array('description' => 'Missing author attribute main_genre', 'code' => 406);
+    }
+
+    if (50 < strlen($data['first_name'])) {
+        return array('description' => 'Maximum length for field first_name must be less than 50 characters', 'code' => 406);
+    }
+    if (50 < strlen($data['last_name'])) {
+        return array('description' => 'Maximum length for field last_name must be less than 50 characters', 'code' => 406);
+    }
+    if (!preg_match('/^\d{2}-\d{2}-\d{4}$/', $data['birthdate'])) {
+        return array('description' => 'Please, input valid birth date in format d-m-Y', 'code' => 406);
+    }
+    if (empty($data['main_genre'])) {
+        return array('description' => 'Please, input valid genre', 'code' => 406);
+    }
+    return false;
+}
+
+/**
+ * implement function for create author entity throw POST request 
+ * like this: http://domain/endpoint/author/ and set header Content-Type:application/x-www-form-urlencodedparameters  
+ * Input parameters on request body like this: first_name=petro&last_name=petrov&birthdate=12-01-1980&mileage=blue
+ * @params $data - array of author data
+ * @return return result = 1 or null with error in header if false
+ */
+function _author_service_create($data) {
+
+    $error = _author_data_validate($data);
+    if (FALSE != $error) {
+        return services_error($error['description'], $error['code']);
+    }
+
+    $primary_key = !empty($data->author_id) ? array('author_id') : array();
+    $result = drupal_write_record('author', $data, $primary_key);
+    if (0 != $result) {
+        return (object) array(
+              'result' => TRUE,
+        );
+    }
+    return services_error('Error author creation!', 303);
+}
+
+/**
+ * implement function for update custom entity throw PUT request
+ * for example: http://localhost/drup/service/author/2
+ * add header application/json
+ * set params in json format - {"first_name":"petro", "last_name":"petrov", "birthdate":"12-01-1985", "main_genre":"drama"
+ * @param $author_id - id of author
+ * @param $data - data struct for update 
+ * @return true or error on fail
+ */
+function _author_service_update($author_id, $data) {
+
+    if (!$author_id) {
+        return services_error('Please, provide author id for upadating!', 406);
+    }
+    $error = _author_data_validate($data);
+
+    if (false != $error) {
+        return services_error($error['description'], $error['code']);
+    }
+
+    $primary_key = !empty($author_id) ? array('author_id') : array();
+    $data['author_id'] = $author_id;
+    $result = drupal_write_record('author', $data, $primary_key);
+
+    if (0 != $result) {
+        return (object) array(
+              'result' => true,
+        );
+    }
+    return services_error('Error author creation!', 303);
+}
+
+/**
+ * this function delete a author entity by given author_id.
+ * @param $author_id author unique identifier of the author we're deleting.
+ * @return The node's nid.
+ */
+function _author_service_delete($author_id) {
+    $result = entity_delete('author', $author_id);
+    if (null == $result) {
+        return (object) array(
+              'result' => TRUE,
+        );
+    }
+    return services_error('Error author deletion!', 303);
+}
+
+/**
+ * Return an array of optionally paged author_ids baed on a set of criteria.
+ * An example request might look like
+ * http://domain/endpoint/author?fields=first_name,last_name&page=0&pagesize=5
+ * This would return an array of objects with only first_name, last_name and birthdate defined, of range 1 - 10 item
+ * @param $page  Page number of results to return (in pages of 20).
+ * @param $fields  The fields you want returned.
+ * @param $parameters   An array containing fields and values used to build a sql WHERE clause indicating items to retrieve.
+ * @param $page_size Integer number of items to be returned.
+ * @return An array of author objects.
+ */
+function _author_service_index($page, $fields, $parameters, $page_size) {
+    module_load_include('inc', 'services', 'services.module');
+    $author_select = db_select('author', 't')
+        ->orderBy('first_name', 'DESC')
+        ->orderBy('last_name', 'DESC');
+
+    services_resource_build_index_query($author_select, $page, $fields, $parameters, $page_size, 'author');
+
+    $results = services_resource_execute_index_query($author_select);
+    //var_dump($results);
+    $responce = services_resource_build_index_list($results, 'author', 'author_id');
+
+    if (is_array($responce)) {
+        foreach ($responce as $author) {
+            unset($author->uri);
+        }
+    }
+    return $responce;
+}
+
+/**
+ * implement access func
+ */
+function _author_service_access($op, $args) {
+    $access = TRUE;
+    return $access;
+}

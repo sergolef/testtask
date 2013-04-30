@@ -1,0 +1,6 @@
+name = Author entity 
+description = Custom entity - author.
+package = Entityes
+core = 7.x
+files[] = author.install
+files[] = author.module

@@ -1,0 +1,9 @@
+name = Loger
+description = Module for logging any doings with entity.
+package = Utils
+core = 7.x
+files[] = loger.install
+files[] = /tmhOAuth/tmhOAuth.php
+files[] = /tmhOAuth/tmhUtilities.php
+files[] = loger.module
+
